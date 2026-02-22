@@ -1,0 +1,99 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #0f0e1a;
+    font-family: 'Fredoka One', 'Nunito', 'Comic Sans MS', cursive;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+#gameCanvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+}
+
+/* Mobile controls */
+#mobileControls {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 10px 20px 20px;
+    pointer-events: none;
+    z-index: 10;
+}
+
+@media (max-width: 800px), (pointer: coarse) {
+    #mobileControls { display: flex; justify-content: space-between; align-items: flex-end; }
+}
+
+#dpad {
+    display: grid;
+    grid-template-columns: 48px 48px 48px;
+    grid-template-rows: 48px 48px 48px;
+    gap: 2px;
+    pointer-events: auto;
+}
+
+.dpad-btn {
+    width: 48px;
+    height: 48px;
+    border: none;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.8);
+    font-size: 18px;
+    cursor: pointer;
+    pointer-events: auto;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+.dpad-btn:active { background: rgba(255,255,255,0.35); }
+.dpad-btn[data-dir="up"]    { grid-column: 2; grid-row: 1; }
+.dpad-btn[data-dir="left"]  { grid-column: 1; grid-row: 2; }
+.dpad-btn[data-dir="right"] { grid-column: 3; grid-row: 2; }
+.dpad-btn[data-dir="down"]  { grid-column: 2; grid-row: 3; }
+
+#actionBtns {
+    display: flex;
+    gap: 10px;
+    pointer-events: auto;
+}
+
+.action-btn {
+    width: 56px;
+    height: 56px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 50%;
+    font-family: 'Fredoka One', cursive;
+    font-size: 18px;
+    cursor: pointer;
+    pointer-events: auto;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+#btnA {
+    background: rgba(100, 200, 100, 0.3);
+    color: #8f8;
+}
+
+#btnB {
+    background: rgba(200, 100, 100, 0.3);
+    color: #f88;
+}
+
+.action-btn:active { transform: scale(0.9); }
