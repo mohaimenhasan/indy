@@ -8,12 +8,12 @@
 const SUPABASE_URL = 'https://wamxqpuoaslwucytrpyn.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndhbXhxcHVvYXNsd3VjeXRycHluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3NzIwMTMsImV4cCI6MjA4NzM0ODAxM30.fphgzXFOKEukvUVwzXnC3uXKiTExm7o--I8S6_ioFac';
 
-let supabase = null;
+let sbClient = null;
 let currentUser = null;
 let isGuest = false;
 
 try {
-    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+    sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 } catch (e) {
     console.warn('Supabase not available, using local saves only');
 }
@@ -42,7 +42,7 @@ document.getElementById('btnLogin')?.addEventListener('click', async () => {
     if (!email || !pass) { showAuthMsg('Enter email and password', false); return; }
     showAuthMsg('Logging in...', true);
     try {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
+        const { data, error } = await sbClient.auth.signInWithPassword({ email, password: pass });
         if (error) throw error;
         currentUser = data.user;
         isGuest = false;
@@ -58,7 +58,7 @@ document.getElementById('btnSignup')?.addEventListener('click', async () => {
     if (pass.length < 6) { showAuthMsg('Password must be at least 6 characters', false); return; }
     showAuthMsg('Creating account...', true);
     try {
-        const { data, error } = await supabase.auth.signUp({ email, password: pass });
+        const { data, error } = await sbClient.auth.signUp({ email, password: pass });
         if (error) throw error;
         currentUser = data.user;
         isGuest = false;
@@ -82,9 +82,9 @@ function showAuthMsg(msg, ok) {
 
 // Check existing session
 (async function initAuth() {
-    if (!supabase) { showAuth(); return; }
+    if (!sbClient) { showAuth(); return; }
     try {
-        const { data } = await supabase.auth.getSession();
+        const { data } = await sbClient.auth.getSession();
         if (data?.session?.user) {
             currentUser = data.session.user;
             isGuest = false;
@@ -99,10 +99,10 @@ function showAuthMsg(msg, ok) {
 
 // ── Cloud Save/Load ─────────────────────────────────────────
 async function saveToCloud() {
-    if (isGuest || !currentUser || !supabase) return;
+    if (isGuest || !currentUser || !sbClient) return;
     try {
         const saveData = getSaveData();
-        const { error } = await supabase.from('save_games').upsert({
+        const { error } = await sbClient.from('save_games').upsert({
             user_id: currentUser.id,
             save_data: saveData,
             updated_at: new Date().toISOString()
@@ -112,9 +112,9 @@ async function saveToCloud() {
 }
 
 async function loadCloudSave() {
-    if (isGuest || !currentUser || !supabase) return false;
+    if (isGuest || !currentUser || !sbClient) return false;
     try {
-        const { data, error } = await supabase.from('save_games')
+        const { data, error } = await sbClient.from('save_games')
             .select('save_data').eq('user_id', currentUser.id).single();
         if (error || !data) { loadLocalSave(); return false; }
         applySaveData(data.save_data);
