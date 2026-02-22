@@ -144,7 +144,7 @@ function getSaveData() {
         bag: GS.bag, gold: GS.gold, badges: GS.badges, questsDone: GS.questsDone,
         flags: GS.flags, evolved: GS.evolved, chestsOpened: GS.chestsOpened,
         trainersDefeated: GS.trainersDefeated, battleCount: GS.battleCount,
-        playTime: GS.playTime
+        playTime: GS.playTime, towerBest: GS.towerBest
     };
 }
 
@@ -810,6 +810,29 @@ const NPCS = [
         { text: "Radical!", action: 'battle',
           team: [createCreature(18, 14), createCreature(19, 16), createCreature(29, 15)], next: null },
     ], defeated: false, defeatMsg: "Tubular battle!" },
+    { zone: 4, x: 30, y: 4, name: 'Tamer Reef', emoji: '🧜', dialogue: [
+        { text: "The ocean gives my creatures strength! Battle me!", action: 'battle',
+          team: [createCreature(18, 15), createCreature(20, 16)], next: null },
+    ], defeated: false, defeatMsg: "The tides will turn next time!" },
+
+    { zone: 3, x: 24, y: 8, name: 'Tamer Echo', emoji: '🦇', dialogue: [
+        { text: "These caves hold ancient power... Care to test yours?", action: 'battle',
+          team: [createCreature(21, 12), createCreature(22, 13)], next: null },
+    ], defeated: false, defeatMsg: "The echoes remember your strength..." },
+
+    { zone: 5, x: 22, y: 22, name: 'Tamer Ash', emoji: '🔥', dialogue: [
+        { text: "I train in this volcano heat! You'll burn!", action: 'battle',
+          team: [createCreature(0, 18), createCreature(1, 20), createCreature(2, 19)], next: null },
+    ], defeated: false, defeatMsg: "I'll rise from the ashes!" },
+
+    { zone: 6, x: 8, y: 12, name: 'Tamer Shade', emoji: '👤', dialogue: [
+        { text: "In the shadow realm, only the strongest survive!", action: 'battle',
+          team: [createCreature(22, 25), createCreature(23, 26), createCreature(21, 24)], next: null },
+    ], defeated: false, defeatMsg: "You pierced through the darkness!" },
+    { zone: 6, x: 28, y: 20, name: 'Tamer Cosmos', emoji: '🌌', dialogue: [
+        { text: "My star creatures shine brighter than any!", action: 'battle',
+          team: [createCreature(31, 24), createCreature(32, 26), createCreature(33, 28)], next: null },
+    ], defeated: false, defeatMsg: "You outshone the cosmos itself!" },
 
     { zone: 5, x: 14, y: 10, name: 'Arena Master Terra', emoji: '⛰️', dialogue: [
         { text: "I am Terra! You need the Thunder Crest to challenge me.", choices: ['I have it!','Not yet...'], next: [1, null] },
@@ -841,6 +864,11 @@ const NPCS = [
     { zone: 7, x: 12, y: 11, name: 'Sign', emoji: '🪧', isSign: true, dialogue: [
         { text: "Final Arena — Only the worthy may enter! 👑", next: null }
     ]},
+    { zone: 7, x: 12, y: 15, name: 'Battle Tower', emoji: '🏟️', dialogue: [
+        { text: "Welcome to the BATTLE TOWER! Fight waves of AI trainers for glory and rewards!", next: 1 },
+        { text: "Each wave gets harder. How far can you go? Your best streak: " + "will be tracked!", choices: ['Enter Tower!','Not now'], next: [2, null] },
+        { text: "Entering the Battle Tower!", action: 'battle_tower', next: null },
+    ]},
 ];
 
 // ── Quests ───────────────────────────────────────────────────
@@ -865,6 +893,7 @@ let GS = {
     gold: 500, badges: [], questsDone: [], flags: {}, evolved: false,
     chestsOpened: {}, trainersDefeated: {}, battleCount: 0, playTime: 0,
     battle: null, dialogue: null, menu: { cursor: 0 }, shop: null,
+    towerFloor: 0, towerBest: 0, towerActive: false,
     cam: { x: 0, y: 0 },
     transition: { active: false, alpha: 0, phase: null, callback: null },
     particles: [], notifications: [], shake: { x: 0, y: 0, intensity: 0 },
@@ -1574,6 +1603,9 @@ function handleDialogueAction(step) {
             if (GS.dialogue.npc.defeated) { GS.screen = 'world'; inputCooldown = 200; return; }
             const team = step.team.map(t => createCreature(t.speciesId, t.level));
             startBattle(team, false, GS.dialogue.npc, step.badge); inputCooldown = 300; break;
+        case 'battle_tower':
+            GS.towerFloor = 1; GS.towerActive = true;
+            startTowerBattle(); inputCooldown = 300; break;
     }
 }
 function drawDialogue(time) {
@@ -1639,7 +1671,7 @@ function startBattle(opponent, isWild, trainerNpc, badge) {
         shakeEnemy: 0, shakePlayer: 0, playerDefending: false, enemyDefending: false,
         catchAnim: 0, catchSuccess: false, xpMessages: [], xpMsgIndex: 0, introTimer: 0,
         playerStatBoosts: {atk:0,def:0,spd:0}, enemyStatBoosts: {atk:0,def:0,spd:0},
-        pendingEnemyTurn: false, resultType: null, bagItems: []
+        pendingEnemyTurn: false, pendingPlayerMove: null, resultType: null, bagItems: []
     };
     GS.screen = 'battle'; inputCooldown = 500;
 }
@@ -1699,7 +1731,8 @@ function updateBattle(dt) {
         case 'animate':
             b.animTimer += dt;
             if (b.animTimer > 1200) {
-                if (b.pendingEnemyTurn) { b.pendingEnemyTurn=false; enemyTurn(); }
+                if (b.pendingPlayerMove) { const pm = b.pendingPlayerMove; b.pendingPlayerMove = null; executeMove(pm,b.playerTop,b.enemyTop,b.playerStatBoosts,b.enemyStatBoosts,true); b.animTimer = 0; }
+                else if (b.pendingEnemyTurn) { b.pendingEnemyTurn=false; enemyTurn(); b.animTimer = 0; }
                 else if (b.playerTop.hp<=0) { const alive = GS.team.find(t=>t.hp>0); if (alive) { b.message=`${b.playerTop.name} fainted! Choose another!`; b.subMenu='team'; b.subCursor=0; b.phase='choose'; } else { b.message='All creatures fainted...'; b.phase='result'; b.resultType='lose'; sfx('lose'); } }
                 else if (b.enemyTop.hp<=0) {
                     b.enemyIndex++; if (b.enemyIndex<b.enemyTeam.length) { b.enemyTop=b.enemyTeam[b.enemyIndex]; b.enemyStatBoosts={atk:0,def:0,spd:0}; b.message=b.isWild?`Wild ${b.enemyTop.name}!`:`Sent out ${b.enemyTop.name}!`; b.phase='animate'; b.animTimer=0; }
@@ -1727,7 +1760,26 @@ function updateBattle(dt) {
         case 'result':
             if (actionJustPressed()) {
                 sfx('confirm');
-                if (b.resultType==='lose') { GS.team.forEach(t => { t.hp=Math.floor(t.maxHp*0.5); t.moves.forEach(m=>t.movePP[m]=MOVES_DB[m].pp); }); GS.gold=Math.max(0,GS.gold-100); addNotification('Blacked out! Lost some gold...'); if ([2,3,4,5,6,7].includes(GS.zone)) { GS.player.x=6*TILE; GS.player.y=21*TILE; GS.zone=2; } else { GS.player.x=21*TILE; GS.player.y=18*TILE; GS.zone=0; } }
+                if (b.isTower && b.resultType === 'win') {
+                    GS.towerFloor++;
+                    if (GS.towerFloor > GS.towerBest) GS.towerBest = GS.towerFloor - 1;
+                    const floorReward = 200 + GS.towerFloor * 100;
+                    GS.gold += floorReward;
+                    addNotification(`🏟️ Floor ${GS.towerFloor-1} cleared! +${floorReward} gold!`);
+                    GS.team.forEach(t => { t.hp = Math.min(t.maxHp, t.hp + Math.floor(t.maxHp * 0.3)); });
+                    GS.battle = null;
+                    startTowerBattle();
+                    saveGame(); inputCooldown = 500;
+                    return;
+                }
+                if (b.isTower && b.resultType === 'lose') {
+                    const floorsCleared = GS.towerFloor - 1;
+                    if (floorsCleared > GS.towerBest) GS.towerBest = floorsCleared;
+                    addNotification(`🏟️ Battle Tower: ${floorsCleared} floors cleared! Best: ${GS.towerBest}`);
+                    GS.towerActive = false;
+                    GS.team.forEach(t => { t.hp = Math.floor(t.maxHp * 0.5); t.moves.forEach(m=>t.movePP[m]=MOVES_DB[m].pp); });
+                }
+                else if (b.resultType==='lose') { GS.team.forEach(t => { t.hp=Math.floor(t.maxHp*0.5); t.moves.forEach(m=>t.movePP[m]=MOVES_DB[m].pp); }); GS.gold=Math.max(0,GS.gold-100); addNotification('Blacked out! Lost some gold...'); if ([2,3,4,5,6,7].includes(GS.zone)) { GS.player.x=6*TILE; GS.player.y=21*TILE; GS.zone=2; } else { GS.player.x=21*TILE; GS.player.y=18*TILE; GS.zone=0; } }
                 GS.screen='world'; GS.battle=null; saveGame(); inputCooldown=300;
             }
             break;
@@ -1737,8 +1789,15 @@ function updateBattle(dt) {
 function executeTurn(mk) {
     const b = GS.battle; const move = MOVES_DB[mk]; b.playerTop.movePP[mk]--; b.subMenu=null;
     const pSpd = b.playerTop.spd*(1+b.playerStatBoosts.spd*0.25); const eSpd = b.enemyTop.spd*(1+b.enemyStatBoosts.spd*0.25);
-    if (pSpd>=eSpd) { executeMove(move,b.playerTop,b.enemyTop,b.playerStatBoosts,b.enemyStatBoosts,true); if (b.enemyTop.hp>0) b.pendingEnemyTurn=true; }
-    else { enemyTurn(); if (b.playerTop.hp>0) setTimeout(()=>executeMove(move,b.playerTop,b.enemyTop,b.playerStatBoosts,b.enemyStatBoosts,true),600); }
+    if (pSpd>=eSpd) {
+        executeMove(move,b.playerTop,b.enemyTop,b.playerStatBoosts,b.enemyStatBoosts,true);
+        if (b.enemyTop.hp>0) b.pendingEnemyTurn=true;
+    } else {
+        enemyTurn();
+        if (b.playerTop.hp>0 && b.enemyTop.hp>0) {
+            b.pendingPlayerMove = move;
+        }
+    }
     b.phase='animate'; b.animTimer=0; inputCooldown=300;
 }
 function executeMove(move, atk, def, atkB, defB, isP) {
@@ -1788,12 +1847,12 @@ function drawBattle(time) {
     // Enemy
     const eX=canvas.width*0.7+(b.shakeEnemy>0?(Math.random()-0.5)*b.shakeEnemy:0);
     if (b.shakeEnemy>0) b.shakeEnemy-=0.5;
-    if (b.phase!=='catch_anim'||b.catchAnim<500) drawCreature(eX,canvas.height*0.3,b.enemyTop.species,45,time,b.enemyTop.hp,b.enemyTop.maxHp);
+    if (b.phase!=='catch_anim'||b.catchAnim<500) drawCreature(eX,canvas.height*0.3,b.enemyTop.species,55,time,b.enemyTop.hp,b.enemyTop.maxHp);
     else { const bp=Math.min(1,(b.catchAnim-500)/1000); ctx.font='30px sans-serif'; ctx.textAlign='center'; ctx.fillText('🥚',eX+Math.sin(b.catchAnim/200)*10*(1-bp),canvas.height*0.3+bp*30); }
     // Player
     const pX=canvas.width*0.3+(b.shakePlayer>0?(Math.random()-0.5)*b.shakePlayer:0);
     if (b.shakePlayer>0) b.shakePlayer-=0.5;
-    drawCreature(pX,canvas.height*0.55,b.playerTop.species,50,time,b.playerTop.hp,b.playerTop.maxHp);
+    drawCreature(pX,canvas.height*0.55,b.playerTop.species,55,time,b.playerTop.hp,b.playerTop.maxHp);
     // Enemy info
     drawRoundRect(canvas.width*0.05,20,260,70,10,'rgba(0,0,0,0.7)','#666');
     ctx.fillStyle='#fff'; ctx.font='16px Fredoka One, cursive'; ctx.textAlign='left';
@@ -1861,10 +1920,11 @@ function drawBattle(time) {
         ctx.fillStyle='rgba(255,255,255,0.5)'; ctx.font='14px Nunito'; ctx.fillText('Press Space',canvas.width/2,canvas.height*0.55);
     }
     if (b.isWild&&b.phase==='choose') { ctx.fillStyle='rgba(255,255,100,0.7)'; ctx.font='12px Nunito'; ctx.textAlign='left'; ctx.fillText('🌿 WILD',canvas.width*0.05+12,16); }
+    if (b.isTower) { ctx.fillStyle='rgba(255,200,100,0.9)'; ctx.font='13px Fredoka One'; ctx.textAlign='right'; ctx.fillText(`🏟️ Floor ${GS.towerFloor} | Best: ${GS.towerBest}`,canvas.width-16,16); }
 }
 
 // ── Menu ────────────────────────────────────────────────────
-const MENU_ITEMS = ['Team','Bag','Quests','Save','Close'];
+const MENU_ITEMS = ['Team','Bag','Quests','Battle Tower','Save','Close'];
 function updateMenu(dt) {
     if (inputCooldown>0) { inputCooldown-=dt; return; }
     if (cancelJustPressed()) { GS.screen='world'; sfx('cancel'); inputCooldown=200; return; }
@@ -1876,6 +1936,10 @@ function updateMenu(dt) {
             case 'Team': GS.screen='team_view'; GS.teamView={cursor:0}; break;
             case 'Bag': GS.screen='bag'; GS.bagView={cursor:0,items:Object.entries(GS.bag).filter(([k,v])=>v>0)}; break;
             case 'Quests': GS.screen='quests'; break;
+            case 'Battle Tower':
+                if (GS.badges.length === 0) { addNotification('🏟️ Earn a Crest first!'); sfx('bump'); GS.screen='world'; }
+                else { GS.towerFloor = 1; GS.towerActive = true; GS.screen='world'; startTowerBattle(); }
+                break;
             case 'Save': saveGame(); addNotification('💾 Saved!'+(currentUser?' ☁️':'')); sfx('confirm'); GS.screen='world'; break;
             case 'Close': GS.screen='world'; break;
         }
@@ -1899,7 +1963,26 @@ function drawMenu(time) {
 }
 
 // ── Team/Bag/Quest views ────────────────────────────────────
-function updateTeamView(dt) { if (inputCooldown>0) { inputCooldown-=dt; return; } if (cancelJustPressed()) { GS.screen='menu'; sfx('cancel'); inputCooldown=200; return; } if (isDown('up')) { GS.teamView.cursor=Math.max(0,GS.teamView.cursor-1); sfx('select'); inputCooldown=150; } if (isDown('down')) { GS.teamView.cursor=Math.min(GS.team.length-1,GS.teamView.cursor+1); sfx('select'); inputCooldown=150; } }
+function updateTeamView(dt) {
+    if (inputCooldown>0) { inputCooldown-=dt; return; }
+    if (cancelJustPressed()) { GS.screen='menu'; sfx('cancel'); inputCooldown=200; return; }
+    if (isDown('up')) { GS.teamView.cursor=Math.max(0,GS.teamView.cursor-1); sfx('select'); inputCooldown=150; }
+    if (isDown('down')) { GS.teamView.cursor=Math.min(GS.team.length-1,GS.teamView.cursor+1); sfx('select'); inputCooldown=150; }
+    if (actionJustPressed() && GS.teamView.useItem) {
+        const ik = GS.teamView.useItem; const item = ITEMS[ik]; const t = GS.team[GS.teamView.cursor];
+        if (item.effect === 'heal') {
+            if (t.hp <= 0) { addNotification(`${t.name} is fainted!`); }
+            else if (t.hp >= t.maxHp) { addNotification(`${t.name} is at full HP!`); }
+            else { t.hp = Math.min(t.maxHp, t.hp + item.value); GS.bag[ik]--; addNotification(`Used ${item.name} on ${t.name}!`); sfx('heal'); }
+        } else if (item.effect === 'revive') {
+            if (t.hp > 0) { addNotification(`${t.name} doesn't need reviving!`); }
+            else { t.hp = Math.floor(t.maxHp * item.value); GS.bag[ik]--; addNotification(`${t.name} was revived!`); sfx('heal'); }
+        } else if (item.effect === 'stat_atk') { t.atk += item.value; GS.bag[ik]--; addNotification(`${t.name}'s ATK rose by ${item.value}!`); sfx('confirm'); }
+        else if (item.effect === 'stat_def') { t.def += item.value; GS.bag[ik]--; addNotification(`${t.name}'s DEF rose by ${item.value}!`); sfx('confirm'); }
+        else if (item.effect === 'stat_spd') { t.spd += item.value; GS.bag[ik]--; addNotification(`${t.name}'s SPD rose by ${item.value}!`); sfx('confirm'); }
+        GS.teamView.useItem = null; GS.screen = 'menu'; inputCooldown = 200; saveGame();
+    }
+}
 function drawTeamView(time) {
     ctx.fillStyle='#0a0a2e'; ctx.fillRect(0,0,canvas.width,canvas.height);
     ctx.textAlign='center'; ctx.fillStyle='#ffdd88'; ctx.font='24px Fredoka One'; ctx.fillText('My Digital Creatures',canvas.width/2,36);
@@ -1973,9 +2056,31 @@ function drawShop(time) {
     ctx.fillStyle='rgba(255,255,255,0.4)'; ctx.font='12px Nunito'; ctx.textAlign='center'; ctx.fillText('Z = Buy | X = Leave',canvas.width/2,sy+sh+20);
 }
 
-// ══════════════════════════════════════════════════════════════
+// ── Battle Tower System ─────────────────────────────────────
+const TOWER_NAMES = ['Rival Byte','Shadow Tamer','Data Knight','Cyber Ace','Pixel Pro','Neo Master','Quantum Lord','Omega Tamer','Infinity','The Architect'];
+function startTowerBattle() {
+    const floor = GS.towerFloor;
+    const baseLvl = Math.min(45, 8 + floor * 3);
+    const teamSize = Math.min(6, 2 + Math.floor(floor / 2));
+    const enemyTeam = [];
+    const usedIds = new Set();
+    for (let i = 0; i < teamSize; i++) {
+        let sid;
+        do { sid = Math.floor(Math.random() * SPECIES.length); } while (usedIds.has(sid));
+        usedIds.add(sid);
+        const lvl = baseLvl + Math.floor(Math.random() * 5) - 2;
+        enemyTeam.push(createCreature(sid, Math.max(5, lvl)));
+    }
+    const tName = TOWER_NAMES[Math.min(floor - 1, TOWER_NAMES.length - 1)] + ` (Floor ${floor})`;
+    const fakeNpc = { name: tName, emoji: '🏟️', defeated: false };
+    startBattle(enemyTeam, false, fakeNpc, null);
+    GS.battle.isTower = true;
+    GS.battle.message = `🏟️ Battle Tower — Floor ${floor}!`;
+}
+
+// ═══════════════════════════════════════════════════════════════
 // MAIN LOOP
-// ══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
 let lastTime = 0;
 function gameLoop(ts) {
     const dt = Math.min(50, ts - lastTime); lastTime = ts; const time = ts;
