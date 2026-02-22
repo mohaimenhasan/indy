@@ -8,7 +8,7 @@ html, body {
     width: 100%;
     height: 100%;
     overflow: hidden;
-    background: #0f0e1a;
+    background: #0a0a1e;
     font-family: 'Fredoka One', 'Nunito', 'Comic Sans MS', cursive;
     -webkit-tap-highlight-color: transparent;
     touch-action: none;
@@ -16,6 +16,103 @@ html, body {
     -webkit-user-select: none;
 }
 
+.hidden { display: none !important; }
+
+/* Auth Screen */
+#authScreen {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #0a0a2e 0%, #1a0a4a 40%, #2a1a5a 70%, #0a0a2e 100%);
+}
+
+.auth-box {
+    background: rgba(20, 15, 40, 0.95);
+    border: 2px solid #6644aa;
+    border-radius: 20px;
+    padding: 40px 36px;
+    width: 340px;
+    text-align: center;
+    box-shadow: 0 0 60px rgba(100, 68, 170, 0.3);
+}
+
+.auth-box h1 {
+    color: #ffdd88;
+    font-size: 36px;
+    margin-bottom: 4px;
+}
+
+.auth-box .subtitle {
+    color: #aa88dd;
+    font-size: 14px;
+    margin-bottom: 24px;
+}
+
+#authForm input {
+    display: block;
+    width: 100%;
+    padding: 12px 16px;
+    margin-bottom: 10px;
+    border: 2px solid #444;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.06);
+    color: #fff;
+    font-family: 'Nunito', sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+#authForm input:focus {
+    border-color: #8866cc;
+}
+
+.auth-btn {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 8px;
+    border: 2px solid #6644aa;
+    border-radius: 10px;
+    background: rgba(100, 68, 170, 0.2);
+    color: #ccbbee;
+    font-family: 'Fredoka One', cursive;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.auth-btn:hover { background: rgba(100, 68, 170, 0.4); }
+.auth-btn.primary {
+    background: #6644aa;
+    color: #fff;
+}
+.auth-btn.primary:hover { background: #7755bb; }
+.auth-btn.guest {
+    border-color: #44aa66;
+    color: #88ddaa;
+    background: rgba(68, 170, 102, 0.15);
+}
+.auth-btn.guest:hover { background: rgba(68, 170, 102, 0.3); }
+
+.divider {
+    color: #666;
+    font-size: 12px;
+    margin: 12px 0;
+}
+
+.auth-msg {
+    color: #ff8888;
+    font-size: 12px;
+    margin-top: 12px;
+    min-height: 18px;
+}
+
+.auth-msg.success { color: #88ff88; }
+
+/* Game Canvas */
 #gameCanvas {
     display: block;
     width: 100%;
@@ -25,7 +122,6 @@ html, body {
 
 /* Mobile controls */
 #mobileControls {
-    display: none;
     position: fixed;
     bottom: 0;
     left: 0;
@@ -33,10 +129,13 @@ html, body {
     padding: 10px 20px 20px;
     pointer-events: none;
     z-index: 10;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
 }
 
-@media (max-width: 800px), (pointer: coarse) {
-    #mobileControls { display: flex; justify-content: space-between; align-items: flex-end; }
+@media (min-width: 801px) and (pointer: fine) {
+    #mobileControls { display: none !important; }
 }
 
 #dpad {

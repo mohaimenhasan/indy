@@ -3,15 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Spin Clash — Open World Spinning Top RPG!</title>
+    <title>DigiSpin — Digital Creatures RPG!</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌀</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐉</text></svg>">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-    <canvas id="gameCanvas"></canvas>
-    <div id="mobileControls">
+    <div id="authScreen" class="hidden">
+        <div class="auth-box">
+            <h1>🐉 DigiSpin</h1>
+            <p class="subtitle">Digital Creatures RPG</p>
+            <div id="authForm">
+                <input type="email" id="authEmail" placeholder="Email" autocomplete="email">
+                <input type="password" id="authPassword" placeholder="Password" autocomplete="current-password">
+                <button id="btnLogin" class="auth-btn primary">Log In</button>
+                <button id="btnSignup" class="auth-btn">Sign Up</button>
+                <div class="divider">or</div>
+                <button id="btnGuest" class="auth-btn guest">Play as Guest</button>
+            </div>
+            <p id="authMsg" class="auth-msg"></p>
+        </div>
+    </div>
+    <canvas id="gameCanvas" class="hidden"></canvas>
+    <div id="mobileControls" class="hidden">
         <div id="dpad">
             <button class="dpad-btn" data-dir="up">▲</button>
             <button class="dpad-btn" data-dir="left">◀</button>
